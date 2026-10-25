@@ -30,7 +30,7 @@ test("unreachable source preserves real indexed prices and verification time", a
     const result = await getCatalog("case");
     assert.ok(result.offers.length > 0);
     assert.equal(result.cached, true);
-    assert.equal(result.offers[0].origin, 'index');
+    assert.equal(result.offers[0].origin, "index");
     assert.ok(Date.parse(result.offers[0].checkedAt) <= Date.now());
     assert.ok(result.error);
   } finally {

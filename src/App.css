@@ -2,6 +2,13 @@
   max-width: 1600px;
   margin: auto;
 }
+.price-time {
+  display: block;
+  font-size: 9px;
+  color: var(--subtle);
+  margin-top: 6px;
+  line-height: 1.7;
+}
 .site-header {
   height: 82px;
   border-bottom: 1px solid var(--border);

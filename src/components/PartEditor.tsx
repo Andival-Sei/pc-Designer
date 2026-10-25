@@ -201,6 +201,15 @@ export function PartEditor({
                       <a href={o.url} target="_blank" rel="noreferrer">
                         Проверить в магазине <ExternalLink size={11} />
                       </a>
+                      <time className="price-time" dateTime={o.checkedAt}>
+                        {o.origin === "index" ? "Индекс" : "Магазин"} ·{" "}
+                        {new Date(o.checkedAt).toLocaleString("ru-RU", {
+                          day: "2-digit",
+                          month: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </time>
                     </div>
                     <div className="offer-action">
                       <strong>{money(o.price)}</strong>

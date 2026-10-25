@@ -155,7 +155,8 @@ export default function App() {
     const id = project.id,
       entries = Object.entries(project.desired).filter(([, p]) => p.offer);
     let updated = 0,
-      failed = 0;
+      failed = 0,
+      indexed = 0;
     const updates: Partial<Record<Category, Part>> = {};
     await Promise.all(
       entries.map(async ([category, part]) => {
@@ -163,12 +164,17 @@ export default function App() {
           const r = await fetch(`/api/catalog?category=${category}`),
             data: CatalogResponse = await r.json();
           const offer = data.offers.find((o) => o.id === part.offer!.id);
-          if (!r.ok || data.stale || !offer) {
+          if (
+            !r.ok ||
+            !offer ||
+            Date.parse(offer.checkedAt) < Date.parse(part.offer!.checkedAt)
+          ) {
             failed++;
             return;
           }
           updates[category as Category] = { ...part, offer };
-          updated++;
+          if (offer.origin === "index") indexed++;
+          else updated++;
         } catch {
           failed++;
         }
@@ -187,7 +193,7 @@ export default function App() {
       }),
     }));
     setPriceMessage(
-      `${updated ? `Проверено цен: ${updated}.` : "Цены не обновлены."}${failed ? ` Не удалось проверить: ${failed}. Сохранены последние известные цены.` : " Кэш магазина — до 15 минут."}`,
+      `${updated ? `Проверено цен: ${updated}.` : indexed ? "" : "Цены не обновлены."}${indexed ? ` Цен из резервного индекса: ${indexed}. Смотрите дату проверки у товара.` : ""}${failed ? ` Не удалось проверить: ${failed}. Сохранены последние известные цены.` : " Кэш магазина — до 15 минут."}`,
     );
     setRefreshing(false);
   };

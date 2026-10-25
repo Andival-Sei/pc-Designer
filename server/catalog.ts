@@ -5,24 +5,35 @@ import type { Category, CatalogResponse, Offer } from "../src/lib/model.js";
 import seedIndex from "../data/catalog.json" with { type: "json" };
 
 const bundledIndex = seedIndex as unknown as Record<Category, CatalogResponse>;
-let remoteIndex: { time: number; data: Record<Category, CatalogResponse> } | undefined;
+let remoteIndex:
+  { time: number; data: Record<Category, CatalogResponse> } | undefined;
 let indexRequest: Promise<Record<Category, CatalogResponse>> | undefined;
 async function fallbackIndex(): Promise<Record<Category, CatalogResponse>> {
-  if (remoteIndex && Date.now() - remoteIndex.time < 15 * 60 * 1000) return remoteIndex.data;
+  if (remoteIndex && Date.now() - remoteIndex.time < 15 * 60 * 1000)
+    return remoteIndex.data;
   if (indexRequest) return indexRequest;
   indexRequest = (async () => {
     try {
-      const r = await fetch("https://raw.githubusercontent.com/Andival-Sei/pc-Designer/main/data/catalog.json", { signal: AbortSignal.timeout(7000) });
+      const r = await fetch(
+        "https://raw.githubusercontent.com/Andival-Sei/pc-Designer/main/data/catalog.json",
+        { signal: AbortSignal.timeout(7000) },
+      );
       if (!r.ok) throw new Error("Index unavailable");
-      const data = await r.json() as Record<Category, CatalogResponse>;
-      if (!categories.every(c => Array.isArray(data[c.id]?.offers))) throw new Error("Invalid index");
-      remoteIndex = { time: Date.now(), data }; return data;
-    } catch { return remoteIndex?.data || bundledIndex; }
-    finally { indexRequest = undefined; }
+      const data = (await r.json()) as Record<Category, CatalogResponse>;
+      if (!categories.every((c) => Array.isArray(data[c.id]?.offers)))
+        throw new Error("Invalid index");
+      remoteIndex = { time: Date.now(), data };
+      return data;
+    } catch {
+      return remoteIndex?.data || bundledIndex;
+    } finally {
+      indexRequest = undefined;
+    }
   })();
   return indexRequest;
 }
-const fromIndex = (offers: Offer[]): Offer[] => offers.map(o => ({ ...o, origin: "index" }));
+const fromIndex = (offers: Offer[]): Offer[] =>
+  offers.map((o) => ({ ...o, origin: "index" }));
 
 const cache = new Map<Category, { time: number; data: CatalogResponse }>();
 const pending = new Map<Category, Promise<CatalogResponse>>();
@@ -132,7 +143,11 @@ export async function getCatalog(category: Category): Promise<CatalogResponse> {
       if (!offers.length) throw new Error("Catalog unavailable");
       if (partial) {
         const backup = (await fallbackIndex())[category];
-        offers = [...new Map([...fromIndex(backup.offers), ...offers].map(o => [o.id, o])).values()];
+        offers = [
+          ...new Map(
+            [...fromIndex(backup.offers), ...offers].map((o) => [o.id, o]),
+          ).values(),
+        ];
       }
       const data: CatalogResponse = {
         offers: [...new Map(offers.map((o) => [o.id, o])).values()],
@@ -147,12 +162,19 @@ export async function getCatalog(category: Category): Promise<CatalogResponse> {
       cache.set(category, { time: Date.now(), data });
       return data;
     } catch (error) {
-      console.warn("[catalog]", category, error instanceof Error ? error.message : "Source unavailable");
+      console.warn(
+        "[catalog]",
+        category,
+        error instanceof Error ? error.message : "Source unavailable",
+      );
       const backup = saved?.data || (await fallbackIndex())[category];
       const data: CatalogResponse = {
-        ...backup, offers: fromIndex(backup.offers), cached: true,
+        ...backup,
+        offers: fromIndex(backup.offers),
+        cached: true,
         stale: Date.now() - Date.parse(backup.checkedAt) > 24 * 3600000,
-        error: "Магазин недоступен с сервера. Цены из последней успешной проверки; дата указана у каждого товара.",
+        error:
+          "Магазин недоступен с сервера. Цены из последней успешной проверки; дата указана у каждого товара.",
       };
       cache.set(category, { time: Date.now(), data });
       return data;

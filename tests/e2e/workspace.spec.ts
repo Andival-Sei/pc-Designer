@@ -97,13 +97,11 @@ test("export and import add copies without overwriting; invalid backup is reject
           .length,
     ),
   ).toBe(4);
-  await page
-    .locator("input[type=file]")
-    .setInputFiles({
-      name: "broken.json",
-      mimeType: "application/json",
-      buffer: Buffer.from('{"version":1}'),
-    });
+  await page.locator("input[type=file]").setInputFiles({
+    name: "broken.json",
+    mimeType: "application/json",
+    buffer: Buffer.from('{"version":1}'),
+  });
   await expect(page.locator(".toast")).toContainText("файл повреждён");
   expect(
     await page.evaluate(
