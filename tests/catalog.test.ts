@@ -21,14 +21,17 @@ test("Mtech adapter takes sale price, excludes old price, and rejects external p
     globalThis.fetch = original;
   }
 });
-test("unreachable source returns explicit error without fabricated prices", async () => {
+test("unreachable source preserves real indexed prices and verification time", async () => {
   const original = globalThis.fetch;
   globalThis.fetch = async () => {
     throw new Error("network down");
   };
   try {
     const result = await getCatalog("case");
-    assert.deepEqual(result.offers, []);
+    assert.ok(result.offers.length > 0);
+    assert.equal(result.cached, true);
+    assert.equal(result.offers[0].origin, 'index');
+    assert.ok(Date.parse(result.offers[0].checkedAt) <= Date.now());
     assert.ok(result.error);
   } finally {
     globalThis.fetch = original;

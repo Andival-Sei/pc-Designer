@@ -13,6 +13,7 @@ export type Category = (typeof categories)[number]["id"];
 export type Side = "current" | "desired";
 export type Device = "pc" | "phone";
 export interface Offer {
+  origin?: "live" | "index";
   id: string;
   category: Category;
   name: string;
@@ -47,6 +48,7 @@ export interface Workspace {
   projects: Project[];
 }
 export interface CatalogResponse {
+  cached?: boolean;
   offers: Offer[];
   checkedAt: string;
   stale?: boolean;

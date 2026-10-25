@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "tsx --test tests/*.test.ts",
+    "prices:refresh": "tsx scripts/update-prices.ts",
     "test:e2e": "playwright test",
     "format": "prettier --write src server api tests"
   },

@@ -2,6 +2,27 @@ import * as cheerio from "cheerio";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { categories } from "../src/lib/model.js";
 import type { Category, CatalogResponse, Offer } from "../src/lib/model.js";
+import seedIndex from "../data/catalog.json" with { type: "json" };
+
+const bundledIndex = seedIndex as unknown as Record<Category, CatalogResponse>;
+let remoteIndex: { time: number; data: Record<Category, CatalogResponse> } | undefined;
+let indexRequest: Promise<Record<Category, CatalogResponse>> | undefined;
+async function fallbackIndex(): Promise<Record<Category, CatalogResponse>> {
+  if (remoteIndex && Date.now() - remoteIndex.time < 15 * 60 * 1000) return remoteIndex.data;
+  if (indexRequest) return indexRequest;
+  indexRequest = (async () => {
+    try {
+      const r = await fetch("https://raw.githubusercontent.com/Andival-Sei/pc-Designer/main/data/catalog.json", { signal: AbortSignal.timeout(7000) });
+      if (!r.ok) throw new Error("Index unavailable");
+      const data = await r.json() as Record<Category, CatalogResponse>;
+      if (!categories.every(c => Array.isArray(data[c.id]?.offers))) throw new Error("Invalid index");
+      remoteIndex = { time: Date.now(), data }; return data;
+    } catch { return remoteIndex?.data || bundledIndex; }
+    finally { indexRequest = undefined; }
+  })();
+  return indexRequest;
+}
+const fromIndex = (offers: Offer[]): Offer[] => offers.map(o => ({ ...o, origin: "index" }));
 
 const cache = new Map<Category, { time: number; data: CatalogResponse }>();
 const pending = new Map<Category, Promise<CatalogResponse>>();
@@ -109,31 +130,32 @@ export async function getCatalog(category: Category): Promise<CatalogResponse> {
         );
       } else offers = await fetchMtech(category);
       if (!offers.length) throw new Error("Catalog unavailable");
+      if (partial) {
+        const backup = (await fallbackIndex())[category];
+        offers = [...new Map([...fromIndex(backup.offers), ...offers].map(o => [o.id, o])).values()];
+      }
       const data: CatalogResponse = {
         offers: [...new Map(offers.map((o) => [o.id, o])).values()],
         checkedAt: new Date().toISOString(),
         ...(partial
           ? {
               error:
-                "Часть каталога iSpace недоступна. Показаны полученные предложения.",
+                "Часть предложений взята из резервного индекса. Время проверки указано у каждой цены.",
             }
           : {}),
       };
       cache.set(category, { time: Date.now(), data });
       return data;
-    } catch {
-      if (saved)
-        return {
-          ...saved.data,
-          stale: true,
-          error: "Магазин не ответил. Показаны последние известные цены.",
-        };
-      return {
-        offers: [],
-        checkedAt: new Date().toISOString(),
-        error:
-          "Не удалось загрузить цены магазина. Попробуйте позже или добавьте цену вручную.",
+    } catch (error) {
+      console.warn("[catalog]", category, error instanceof Error ? error.message : "Source unavailable");
+      const backup = saved?.data || (await fallbackIndex())[category];
+      const data: CatalogResponse = {
+        ...backup, offers: fromIndex(backup.offers), cached: true,
+        stale: Date.now() - Date.parse(backup.checkedAt) > 24 * 3600000,
+        error: "Магазин недоступен с сервера. Цены из последней успешной проверки; дата указана у каждого товара.",
       };
+      cache.set(category, { time: Date.now(), data });
+      return data;
     } finally {
       pending.delete(category);
     }

@@ -84,7 +84,7 @@ function PartCell({
               className={age > 24 * 3600000 ? "price-old" : "price-source"}
               title={`Проверено ${new Date(o.checkedAt).toLocaleString("ru-RU")}`}
             >
-              {age > 24 * 3600000 ? "Старая цена" : "Цена магазина"}
+              {age > 24 * 3600000 ? "Старая цена" : o.origin === "index" ? "Из индекса" : "Цена магазина"}
             </span>
           ) : amount !== undefined ? (
             <span className="price-source">Вручную</span>
@@ -101,6 +101,7 @@ function PartCell({
           )}
         </div>
       )}
+      {o && <time className="price-time" dateTime={o.checkedAt}>Проверено {new Date(o.checkedAt).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</time>}
     </div>
   );
 }
