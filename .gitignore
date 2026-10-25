@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.local/
+.vercel/
+.env*
+!.env.example
+test-results/
+playwright-report/
+*.tsbuildinfo
+.playwright-mcp/
